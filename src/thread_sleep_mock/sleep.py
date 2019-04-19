@@ -14,7 +14,7 @@ class SleepRegistration(NamedTuple):
     sleep_is_over: Event
 
 
-class MockSleep:
+class SleepMock:
     def __init__(self):
         self._current_time = 0
         self._registrations = []

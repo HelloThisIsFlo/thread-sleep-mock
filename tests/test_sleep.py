@@ -2,8 +2,7 @@ import time
 from threading import Thread, Event
 from unittest.mock import patch
 
-from pytest import mark
-from src.thread_sleep_mock.mock_sleep import MockSleep
+from src.thread_sleep_mock.sleep import SleepMock
 
 TIMEOUT = 5
 
@@ -19,8 +18,8 @@ def async_sleep_for_duration_and_set_event(duration, event):
     job.start()
 
 
-@patch('src.thread_sleep_mock.mock_sleep.time_sleep_before_patch')
-@patch('time.sleep', new_callable=MockSleep)
+@patch('src.thread_sleep_mock.sleep.time_sleep_before_patch')
+@patch('time.sleep', new_callable=SleepMock)
 def test_duration_below_1s__passthrough(_mock_sleep, original_time_sleep):
     done = Event()
     async_sleep_for_duration_and_set_event(0.1, done)
@@ -29,8 +28,8 @@ def test_duration_below_1s__passthrough(_mock_sleep, original_time_sleep):
     original_time_sleep.assert_called_once_with(0.1)
 
 
-@patch('src.thread_sleep_mock.mock_sleep.time_sleep_before_patch')
-@patch('time.sleep', new_callable=MockSleep)
+@patch('src.thread_sleep_mock.sleep.time_sleep_before_patch')
+@patch('time.sleep', new_callable=SleepMock)
 def test_duration_above_or_equal_1s__capture(mock_sleep, original_time_sleep):
     done = Event()
     async_sleep_for_duration_and_set_event(1, done)
@@ -40,7 +39,7 @@ def test_duration_above_or_equal_1s__capture(mock_sleep, original_time_sleep):
     original_time_sleep.assert_not_called()
 
 
-@patch('time.sleep', new_callable=MockSleep)
+@patch('time.sleep', new_callable=SleepMock)
 def test_block_until_sleep_is_over__1s(sleep_mock):
     duration = 1
     is_complete = Event()
@@ -52,7 +51,7 @@ def test_block_until_sleep_is_over__1s(sleep_mock):
     assert is_complete.wait()
 
 
-@patch('time.sleep', new_callable=MockSleep)
+@patch('time.sleep', new_callable=SleepMock)
 def test_block_until_sleep_is_over__4s(sleep_mock):
     duration = 4
     is_complete = Event()
@@ -70,7 +69,7 @@ def test_block_until_sleep_is_over__4s(sleep_mock):
     assert is_complete.wait(1)
 
 
-@patch('time.sleep', new_callable=MockSleep)
+@patch('time.sleep', new_callable=SleepMock)
 def test_multiple_threads(sleep_mock):
     complete_after_1s = Event()
     complete_after_4s = Event()
