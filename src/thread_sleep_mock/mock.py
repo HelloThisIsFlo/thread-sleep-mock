@@ -1,5 +1,5 @@
 import time
-from threading import Condition, Lock
+from threading import Lock, Event
 from typing import NamedTuple
 
 time_sleep_before_patch = time.sleep
@@ -7,7 +7,7 @@ time_sleep_before_patch = time.sleep
 
 class SleepRegistration(NamedTuple):
     sleep_end_time: int
-    sleep_is_over: Condition
+    sleep_is_over: Event
 
 
 class MockSleep:
@@ -23,11 +23,10 @@ class MockSleep:
 
         with self._lock:
             registration = SleepRegistration(sleep_end_time=self._current_time + duration,
-                                             sleep_is_over=Condition())
+                                             sleep_is_over=Event())
             self._registrations.append(registration)
 
-        with registration.sleep_is_over:
-            registration.sleep_is_over.wait()
+        registration.sleep_is_over.wait()
 
     def fast_forward(self, duration):
         with self._lock:
@@ -35,8 +34,7 @@ class MockSleep:
 
             for registration in self._registrations:
                 if registration.sleep_end_time <= self._current_time:
-                    with registration.sleep_is_over:
-                        registration.sleep_is_over.notify()
+                    registration.sleep_is_over.set()
                     self._registrations.remove(registration)
 
     def assert_current_time(self, expected):
