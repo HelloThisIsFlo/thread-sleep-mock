@@ -5,6 +5,10 @@ from typing import NamedTuple
 time_sleep_before_patch = time.sleep
 
 
+def passthrough_to_real_implementation(duration):
+    time_sleep_before_patch(duration)
+
+
 class SleepRegistration(NamedTuple):
     sleep_end_time: int
     sleep_is_over: Event
@@ -18,7 +22,13 @@ class MockSleep:
 
     def __call__(self, duration):
         if duration < 1:
-            time_sleep_before_patch(duration)
+            # Small sleep duration are used in some debuggers (ie: pycharm) to allow for their
+            # instrumentation to take place.
+            #
+            # For the code under tests, it is always possible to configure test-specific sleep
+            # duration that would be over 1s, allowing this library to take over.
+            # So no option to disable the passthrough is provided as of now.
+            passthrough_to_real_implementation(duration)
             return
 
         with self._lock:
