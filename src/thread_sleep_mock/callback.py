@@ -2,7 +2,7 @@ from threading import Event
 
 
 class ThreadSafeCallbackMock(Event):
-    def __call__(self):
+    def __call__(self, *args, **kwargs):
         self.set()
 
     def assert_already_called(self):

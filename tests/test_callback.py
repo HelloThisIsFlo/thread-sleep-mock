@@ -9,12 +9,13 @@ from src.thread_sleep_mock.callback import ThreadSafeCallbackMock
 
 
 class CallCallbackWhenFunctionBecomesTrue(Thread):
-    def __init__(self, function_to_test, callback, delay_between_each_try) -> None:
+    def __init__(self, function_to_test, callback, delay_between_each_try, with_fake_args=False) -> None:
         super().__init__(daemon=True)
         self._function_to_test = function_to_test
         self._callback = callback
         self._delay_between_each_try = delay_between_each_try
         self._should_stop = Event()
+        self._with_fake_args = with_fake_args
 
     def run(self):
         def call_callback_as_soon_as_function_becomes_true():
@@ -26,7 +27,10 @@ class CallCallbackWhenFunctionBecomesTrue(Thread):
                 time.sleep(self._delay_between_each_try)
                 func_result = self._function_to_test()
 
-            self._callback()
+            if self._with_fake_args:
+                self._callback("some arg", some="other arg")
+            else:
+                self._callback()
 
         call_callback_as_soon_as_function_becomes_true()
 
@@ -88,3 +92,18 @@ def test_function_never_true__timeout():
         callback.assert_called_within(1)
 
     job.stop()
+
+
+def test_with_args():
+    function = MagicMock(return_value=False)
+    callback = ThreadSafeCallbackMock()
+
+    job = CallCallbackWhenFunctionBecomesTrue(function,
+                                              callback,
+                                              delay_between_each_try=0,
+                                              with_fake_args=True)
+    job.start()
+
+    callback.assert_not_called_yet()
+    function.return_value = True
+    callback.assert_called_within(1)
