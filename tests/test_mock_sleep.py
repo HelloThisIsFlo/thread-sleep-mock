@@ -3,7 +3,7 @@ from threading import Thread, Event
 from unittest.mock import patch
 
 from pytest import mark
-from src.thread_sleep_mock.mock import MockSleep
+from src.thread_sleep_mock.mock_sleep import MockSleep
 
 TIMEOUT = 5
 
@@ -19,7 +19,7 @@ def async_sleep_for_duration_and_set_event(duration, event):
     job.start()
 
 
-@patch('src.thread_sleep_mock.mock.time_sleep_before_patch')
+@patch('src.thread_sleep_mock.mock_sleep.time_sleep_before_patch')
 @patch('time.sleep', new_callable=MockSleep)
 def test_duration_below_1s__passthrough(_mock_sleep, original_time_sleep):
     done = Event()
@@ -29,7 +29,7 @@ def test_duration_below_1s__passthrough(_mock_sleep, original_time_sleep):
     original_time_sleep.assert_called_once_with(0.1)
 
 
-@patch('src.thread_sleep_mock.mock.time_sleep_before_patch')
+@patch('src.thread_sleep_mock.mock_sleep.time_sleep_before_patch')
 @patch('time.sleep', new_callable=MockSleep)
 def test_duration_above_or_equal_1s__capture(mock_sleep, original_time_sleep):
     done = Event()
