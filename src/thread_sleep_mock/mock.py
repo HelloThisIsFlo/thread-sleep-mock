@@ -43,8 +43,14 @@ class MockSleep:
             self._current_time += duration
 
             for registration in self._registrations:
-                if registration.sleep_end_time <= self._current_time:
+                def should_wake_up():
+                    return registration.sleep_end_time <= self._current_time
+
+                def wake_up():
                     registration.sleep_is_over.set()
+
+                if should_wake_up():
+                    wake_up()
                     self._registrations.remove(registration)
 
     def assert_current_time(self, expected):
