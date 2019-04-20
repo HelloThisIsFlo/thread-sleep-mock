@@ -38,60 +38,64 @@ class CallCallbackWhenFunctionBecomesTrue(Thread):
         self._should_stop.set()
 
 
-def test_with_delay__showcase_race_condition():
-    function = MagicMock(return_value=False)
-    callback = ThreadSafeCallbackMock()
+class TestAssertCalled:
+    def test_showcase_race_condition(self):
+        function = MagicMock(return_value=False)
+        callback = ThreadSafeCallbackMock()
 
-    job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=1)
-    job.start()
+        job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=1)
+        job.start()
 
-    callback.assert_not_called_yet()
-    function.return_value = True
-    with pytest.raises(AssertionError, match="not yet called"):
-        callback.assert_already_called()
-        # Callback hasn't been called yet because of the slight delay between each check.
-        # The Thread is "slow" to figure out something has changed while the test is
-        # immediately trying to detect the change
-        # ==> Race condition: assertion fails when it "shouldn't"
+        callback.assert_not_called_yet()
+        function.return_value = True
+        with pytest.raises(AssertionError, match="not yet called"):
+            callback.assert_already_called()
+            # Callback hasn't been called yet because of the slight delay between each check.
+            # The Thread is "slow" to figure out something has changed while the test is
+            # immediately trying to detect the change
+            # ==> Race condition: assertion fails when it "shouldn't"
 
+    def test_avoid_race_condition__without_delay(self):
+        function = MagicMock(return_value=False)
+        callback = ThreadSafeCallbackMock()
 
-def test_without_delay__avoid_race_condition():
-    function = MagicMock(return_value=False)
-    callback = ThreadSafeCallbackMock()
+        job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=0)
+        job.start()
 
-    job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=0)
-    job.start()
-
-    callback.assert_not_called_yet()
-    function.return_value = True
-    callback.assert_called_within(1)
-
-
-@mark.integration
-def test_with_delay__avoid_race_condition():
-    function = MagicMock(return_value=False)
-    callback = ThreadSafeCallbackMock()
-
-    job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=1)
-    job.start()
-
-    callback.assert_not_called_yet()
-    function.return_value = True
-    callback.assert_called_within(5)
-
-
-@mark.integration
-def test_function_never_true__timeout():
-    function = MagicMock(return_value=False)
-    callback = ThreadSafeCallbackMock()
-
-    job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=0)
-    job.start()
-
-    with pytest.raises(AssertionError, match="never called"):
+        callback.assert_not_called_yet()
+        function.return_value = True
         callback.assert_called_within(1)
 
-    job.stop()
+    @mark.integration
+    def test_avoid_race_condition__with_delay(self):
+        function = MagicMock(return_value=False)
+        callback = ThreadSafeCallbackMock()
+
+        job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=1)
+        job.start()
+
+        callback.assert_not_called_yet()
+        function.return_value = True
+        callback.assert_called_within(5)
+
+    @mark.integration
+    def test_function_never_true__timeout(self):
+        timeout = 1
+        function = MagicMock(return_value=False)
+        callback = ThreadSafeCallbackMock()
+
+        job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=0)
+        job.start()
+
+        start_time = time.time()
+        with pytest.raises(AssertionError, match="never called"):
+            callback.assert_called_within(timeout)
+        end_time = time.time()
+
+        duration = end_time - start_time
+        assert duration >= timeout
+
+        job.stop()
 
 
 def test_with_args():
