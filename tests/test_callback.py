@@ -98,6 +98,48 @@ class TestAssertCalled:
         job.stop()
 
 
+class TestAssertNotCalled:
+    def test_showcase_race_condition(self):
+        function = MagicMock(return_value=False)
+        callback = ThreadSafeCallbackMock()
+
+        job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=0)
+        job.start()
+
+        callback.assert_not_called_yet()
+        function.return_value = True
+        callback.assert_not_called_yet()
+        # Callback hasn't been called yet because of the slight delay between each check.
+        # The Thread is "slow" to figure out something has changed while the test is
+        # immediately trying to detect the change
+        # ==> Race condition: assertion succeeds when it "shouldn't"
+
+    def test_avoid_race_condition__without_delay(self):
+        function = MagicMock(return_value=False)
+        callback = ThreadSafeCallbackMock()
+
+        job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=0)
+        job.start()
+
+        callback.assert_not_called_yet()
+        function.return_value = True
+        with pytest.raises(AssertionError, match="shouldn't have been called"):
+            callback.assert_not_called_within(1)
+
+    @mark.integration
+    def test_avoid_race_condition__with_delay(self):
+        function = MagicMock(return_value=False)
+        callback = ThreadSafeCallbackMock()
+
+        job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=1)
+        job.start()
+
+        callback.assert_not_called_yet()
+        function.return_value = True
+        with pytest.raises(AssertionError, match="shouldn't have been called"):
+            callback.assert_not_called_within(5)
+
+
 def test_with_args():
     function = MagicMock(return_value=False)
     callback = ThreadSafeCallbackMock()
