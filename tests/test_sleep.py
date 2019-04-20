@@ -1,10 +1,14 @@
 import time
 from threading import Thread, Event
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from src.thread_sleep_mock.sleep import SleepMock
 
-TIMEOUT = 5
+TIMEOUT = 0.5
+
+
+def give_some_time_for_thread_to_execute():
+    time.sleep(0.01)
 
 
 def async_sleep_for_duration_and_set_event(duration, event):
@@ -18,23 +22,22 @@ def async_sleep_for_duration_and_set_event(duration, event):
     job.start()
 
 
-@patch('src.thread_sleep_mock.sleep.time_sleep_before_patch')
+@patch('src.thread_sleep_mock.sleep.original_time_sleep')
 @patch('time.sleep', new_callable=SleepMock)
 def test_duration_below_1s__passthrough(_mock_sleep, original_time_sleep):
     done = Event()
-    async_sleep_for_duration_and_set_event(0.1, done)
+    async_sleep_for_duration_and_set_event(0.12345, done)
     done.wait(TIMEOUT)
+    original_time_sleep.assert_called_with(0.12345)
 
-    original_time_sleep.assert_called_once_with(0.1)
 
-
-@patch('src.thread_sleep_mock.sleep.time_sleep_before_patch')
+@patch('src.thread_sleep_mock.sleep.original_time_sleep')
 @patch('time.sleep', new_callable=SleepMock)
 def test_duration_above_or_equal_1s__capture(mock_sleep, original_time_sleep):
     done = Event()
     async_sleep_for_duration_and_set_event(1, done)
     mock_sleep.fast_forward(1)
-    done.wait(TIMEOUT)
+    assert done.wait(TIMEOUT)
 
     original_time_sleep.assert_not_called()
 
@@ -66,7 +69,44 @@ def test_block_until_sleep_is_over__4s(sleep_mock):
 
     sleep_mock.fast_forward(1)
     sleep_mock.assert_current_time(4)
-    assert is_complete.wait(1)
+    assert is_complete.wait()
+
+
+@patch('time.sleep', new_callable=SleepMock)
+def test_multiple_sleep_during_fast_forward_duration(sleep_mock):
+    two_seconds = 2
+    function = MagicMock()
+
+    class CallFunctionEvery2s(Thread):
+        def __init__(self):
+            super().__init__()
+            self._should_stop = Event()
+
+        def run(self):
+            while not self._should_stop.is_set():
+                function()
+                time.sleep(two_seconds)
+
+        def stop(self):
+            self._should_stop.set()
+
+    job = CallFunctionEvery2s()
+    job.start()
+
+    assert function.call_count == 1
+    function.reset_mock()
+
+    sleep_mock.fast_forward(two_seconds)
+    give_some_time_for_thread_to_execute()
+    assert function.call_count == 1
+    function.reset_mock()
+
+    sleep_mock.fast_forward(two_seconds * 4)
+    give_some_time_for_thread_to_execute()
+    assert function.call_count == 4
+
+    job.stop()
+    sleep_mock.fast_forward(two_seconds)  # Unlock the job
 
 
 @patch('time.sleep', new_callable=SleepMock)
