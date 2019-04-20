@@ -22,6 +22,7 @@ class SleepMock:
         self._registrations = []
         self._lock = RLock()
         self._increment = 0.1
+        self._unblock_all_called = False
 
     def __call__(self, duration):
         if duration < 1:
@@ -34,6 +35,9 @@ class SleepMock:
             passthrough_to_real_implementation(duration)
         else:
             with self._lock:
+                if self._unblock_all_called:
+                    raise RuntimeError("Can not call 'time.sleep' after calling 'unblock_all'! Only use for teardown")
+
                 registration = SleepRegistration(sleep_end_time=self._current_time + duration,
                                                  sleep_is_over=Event())
                 self._registrations.append(registration)
@@ -54,6 +58,12 @@ class SleepMock:
         while not self._almost_equal(self._current_time, end):
             move_one_increment()
             allow_other_threads_to_acquire_lock()
+
+    def unblock_all(self):
+        with self._lock:
+            for registration in self._registrations:
+                registration.sleep_is_over.set()
+            self._unblock_all_called = True
 
     def _almost_equal(self, float1, float2):
         return math.isclose(float1, float2, abs_tol=self._increment / 100)

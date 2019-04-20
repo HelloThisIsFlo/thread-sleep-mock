@@ -2,6 +2,8 @@ import time
 from threading import Thread, Event
 from unittest.mock import patch, MagicMock
 
+import pytest
+
 from src.thread_sleep_mock.sleep import SleepMock
 
 TIMEOUT = 0.5
@@ -106,7 +108,7 @@ def test_multiple_sleep_during_fast_forward_duration(sleep_mock):
     assert function.call_count == 4
 
     job.stop()
-    sleep_mock.fast_forward(two_seconds)  # Unlock the job
+    sleep_mock.unblock_all()
 
 
 @patch('time.sleep', new_callable=SleepMock)
@@ -153,3 +155,38 @@ def test_multiple_threads(sleep_mock):
     assert complete_after_4s.is_set()
     assert complete_after_10s.is_set()
     assert complete_after_15s.wait(TIMEOUT)
+
+
+class TestUnblockAll:
+
+    @patch('time.sleep', new_callable=SleepMock)
+    def test_unblock_multiple_threads(self, sleep_mock):
+        complete_after_1s = Event()
+        complete_after_4s = Event()
+        complete_after_10s = Event()
+        complete_after_15s = Event()
+
+        async_sleep_for_duration_and_set_event(1, complete_after_1s)
+        async_sleep_for_duration_and_set_event(4, complete_after_4s)
+        async_sleep_for_duration_and_set_event(10, complete_after_10s)
+        async_sleep_for_duration_and_set_event(15, complete_after_15s)
+
+        assert not complete_after_1s.is_set()
+        assert not complete_after_4s.is_set()
+        assert not complete_after_10s.is_set()
+        assert not complete_after_15s.is_set()
+
+        sleep_mock.unblock_all()
+
+        give_some_time_for_thread_to_execute()
+        assert complete_after_1s.is_set()
+        assert complete_after_4s.is_set()
+        assert complete_after_10s.is_set()
+        assert complete_after_15s.is_set()
+
+    @patch('time.sleep', new_callable=SleepMock)
+    def test_mock_cannot_be_used_after_call_to_unblock_all(self, sleep_mock):
+        sleep_mock.unblock_all()
+
+        with pytest.raises(RuntimeError, match="Can not call 'time.sleep' after calling 'unblock_all'"):
+            time.sleep(20)
