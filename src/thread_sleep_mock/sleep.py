@@ -74,10 +74,9 @@ class SleepMock:
                 def should_wake_up():
                     if self._current_time > registration.sleep_end_time:
                         return True
-                    elif self._almost_equal(self._current_time, registration.sleep_end_time):
+                    if self._almost_equal(self._current_time, registration.sleep_end_time):
                         return True
-                    else:
-                        return False
+                    return False
 
                 def wake_up():
                     registration.sleep_is_over.set()
