@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 from pytest import mark
 
-from src.thread_sleep_mock.callback import ThreadSafeCallbackMock
+from src.thread_sleep_mock.callback import BlockingCallbackMock
 
 
 class CallCallbackWhenFunctionBecomesTrue(Thread):
@@ -41,7 +41,7 @@ class CallCallbackWhenFunctionBecomesTrue(Thread):
 class TestAssertCalled:
     def test_showcase_race_condition(self):
         function = MagicMock(return_value=False)
-        callback = ThreadSafeCallbackMock()
+        callback = BlockingCallbackMock()
 
         job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=1)
         job.start()
@@ -57,7 +57,7 @@ class TestAssertCalled:
 
     def test_avoid_race_condition__without_delay(self):
         function = MagicMock(return_value=False)
-        callback = ThreadSafeCallbackMock()
+        callback = BlockingCallbackMock()
 
         job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=0)
         job.start()
@@ -69,7 +69,7 @@ class TestAssertCalled:
     @mark.integration
     def test_avoid_race_condition__with_delay(self):
         function = MagicMock(return_value=False)
-        callback = ThreadSafeCallbackMock()
+        callback = BlockingCallbackMock()
 
         job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=1)
         job.start()
@@ -82,7 +82,7 @@ class TestAssertCalled:
     def test_function_never_true__timeout(self):
         timeout = 1
         function = MagicMock(return_value=False)
-        callback = ThreadSafeCallbackMock()
+        callback = BlockingCallbackMock()
 
         job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=0)
         job.start()
@@ -101,7 +101,7 @@ class TestAssertCalled:
 class TestAssertNotCalled:
     def test_showcase_race_condition(self):
         function = MagicMock(return_value=False)
-        callback = ThreadSafeCallbackMock()
+        callback = BlockingCallbackMock()
 
         job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=0)
         job.start()
@@ -116,7 +116,7 @@ class TestAssertNotCalled:
 
     def test_avoid_race_condition__without_delay(self):
         function = MagicMock(return_value=False)
-        callback = ThreadSafeCallbackMock()
+        callback = BlockingCallbackMock()
 
         job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=0)
         job.start()
@@ -129,7 +129,7 @@ class TestAssertNotCalled:
     @mark.integration
     def test_avoid_race_condition__with_delay(self):
         function = MagicMock(return_value=False)
-        callback = ThreadSafeCallbackMock()
+        callback = BlockingCallbackMock()
 
         job = CallCallbackWhenFunctionBecomesTrue(function, callback, delay_between_each_try=1)
         job.start()
@@ -142,7 +142,7 @@ class TestAssertNotCalled:
 
 def test_with_args():
     function = MagicMock(return_value=False)
-    callback = ThreadSafeCallbackMock()
+    callback = BlockingCallbackMock()
 
     job = CallCallbackWhenFunctionBecomesTrue(function,
                                               callback,

@@ -1,7 +1,7 @@
 from threading import Event
 
 
-class ThreadSafeCallbackMock(Event):
+class BlockingCallbackMock(Event):
     def __call__(self, *args, **kwargs):
         self.set()
 
